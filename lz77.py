@@ -23,6 +23,16 @@ class LZ77Compressor:
         return sub_strings
 
     @staticmethod
+    def is_a_match(search_part, look_ahead_part):
+        if search_part <= look_ahead_part:
+            for i in range(len(look_ahead_part)):
+                if search_part[i % len(search_part)] != look_ahead_part[i]:
+                    return False
+            return True
+        return False
+        # return all(search_part[i % len(search_part)] == look_ahead_part[i] for i in range(len(look_ahead_part)))
+
+    @staticmethod
     def compress(search_buffer_len=1, look_ahead_buffer_len=1, string=None,  input_file=None, output_file=None):
         if not string and input_file:
             with open(input_file, 'rb') as input_f:
@@ -45,7 +55,9 @@ class LZ77Compressor:
                 for j, char1 in enumerate(string[look_ahead_buffer[START]:look_ahead_buffer[END]]):
                     # char_built += char1
                     print(chars_match["string"], char_built)
-                    if char_built == chars_match["string"]:
+                    if char_built == chars_match["string"]\
+                            or LZ77Compressor.is_a_match(chars_match["string"], char_built)\
+                            and chars_match["offset"] == len(chars_match["string"]):
                         found = True
                         print("found")
                         print(chars_match["offset"])
@@ -53,35 +65,35 @@ class LZ77Compressor:
                             if look_ahead_buffer[START] + len(char_built) < len(string) else None
 
                         compressed_string.append(LZ77Compressor.Triple(chars_match["offset"],
-                                                                       len(chars_match["string"]),
+                                                                       len(char_built),
                                                                        string[next_char_index] if next_char_index
                                                                        else None))
                         if output_file:
                             output_binary.extend(chars_match["offset"].to_bytes(length=1, byteorder="big"))
-                            output_binary.extend(len(chars_match["string"]).to_bytes(length=1, byteorder="big"))
+                            output_binary.extend(len(char_built).to_bytes(length=1, byteorder="big"))
                             output_binary.append(string[next_char_index] if next_char_index else 0)
 
                         # print(string[next_char_index])
 
                         break
-                    if char_built.count(chars_match["string"]) * len(chars_match["string"]) == len(char_built)\
-                            and chars_match["offset"] == len(chars_match["string"]):
-                        found = True
-                        print("found")
-                        print(chars_match["offset"])
-                        print(look_ahead_buffer[START])
-                        next_char_index = look_ahead_buffer[START] + len(char_built) \
-                            if look_ahead_buffer[START] + len(char_built) < len(string) else None
-                        print(next_char_index, string)
-                        compressed_string.append(LZ77Compressor.Triple(chars_match["offset"],
-                                                                       len(chars_match["string"]) + len(char_built),
-                                                                       string[next_char_index] if next_char_index
-                                                                       else None))
-                        if output_file:
-                            output_binary.extend(chars_match["offset"].to_bytes(length=1, byteorder="big"))
-                            output_binary.extend((len(chars_match["string"]) + len(char_built)).to_bytes(length=1, byteorder="big"))
-                            output_binary.append(string[next_char_index] if next_char_index else 0)
-                        break
+                    # if char_built.count(chars_match["string"]) * len(chars_match["string"]) == len(char_built)\
+                    #     and chars_match["offset"] == len(chars_match["string"]):
+                    #     found = True
+                    #     print("found")
+                    #     print(chars_match["offset"])
+                    #     print(look_ahead_buffer[START])
+                    #     next_char_index = look_ahead_buffer[START] + len(char_built) \
+                    #         if look_ahead_buffer[START] + len(char_built) < len(string) else None
+                    #     print(next_char_index, string)
+                    #     compressed_string.append(LZ77Compressor.Triple(chars_match["offset"],
+                    #                                                    len(chars_match["string"]) + len(char_built),
+                    #                                                    string[next_char_index] if next_char_index
+                    #                                                    else None))
+                    #     if output_file:
+                    #         output_binary.extend(chars_match["offset"].to_bytes(length=1, byteorder="big"))
+                    #         output_binary.extend((len(chars_match["string"]) + len(char_built)).to_bytes(length=1, byteorder="big"))
+                    #         output_binary.append(string[next_char_index] if next_char_index else 0)
+                    #     break
                     char_built = char_built[:-1]
                 if found:
                     break
@@ -94,10 +106,7 @@ class LZ77Compressor:
 
             triple = compressed_string[len(compressed_string) - 1]
             print(triple.offset, triple.length, triple.char)
-            if triple.length > triple.offset:
-                offset = triple.length + 1 - len(parts[i]["string"])
-            else:
-                offset = triple.length + 1
+            offset = triple.length + 1
             print()
             look_ahead_buffer = look_ahead_buffer[START] + offset, look_ahead_buffer[END] + offset \
                 if look_ahead_buffer[END] + offset < len(string) - 1 else len(string) - 1
@@ -123,11 +132,14 @@ class LZ77Compressor:
                 cursor += 1
             else:
                 cursor -= triple.offset - 1
-                if triple.length > triple.offset:
-                    for _ in range(triple.length // triple.offset - 1):
-                        decompressed_string += decompressed_string[cursor:cursor + triple.offset]
-                else:
-                    decompressed_string += decompressed_string[cursor:cursor + triple.length]
+                decompressed_parts = decompressed_string[cursor:cursor + triple.offset]
+                for i in range(triple.length):
+                    decompressed_string += decompressed_parts[i % len(decompressed_parts)]
+                # if triple.length > triple.offset:
+                #     for _ in range(triple.length // triple.offset - 1):
+                #         decompressed_string += decompressed_string[cursor:cursor + triple.offset]
+                # else:
+                #     decompressed_string += decompressed_string[cursor:cursor + triple.length]
                 if triple.char:
                     decompressed_string += triple.char
                 cursor = len(decompressed_string) - 1
@@ -157,12 +169,15 @@ class LZ77Compressor:
                 cursor += 1
             else:
                 cursor -= offset - 1
-                if length > offset:
-                    for _ in range(length // offset - 1):
-                        decompressed_string.extend(decompressed_string[cursor:cursor + offset])
-                else:
-                    print(decompressed_string[cursor:cursor + length])
-                    decompressed_string.extend(decompressed_string[cursor:cursor + length])
+                decompressed_parts = decompressed_string[cursor:cursor + offset]
+                for k in range(length):
+                    decompressed_string.append(decompressed_parts[k % len(decompressed_parts)])
+                # if length > offset:
+                #     for _ in range(length // offset - 1):
+                #         decompressed_string.extend(decompressed_string[cursor:cursor + offset])
+                # else:
+                #     print(decompressed_string[cursor:cursor + length])
+                #     decompressed_string.extend(decompressed_string[cursor:cursor + length])
                 if char:
                     decompressed_string.append(char)
                 cursor = len(decompressed_string) - 1
@@ -187,14 +202,18 @@ def main():
     # compressed_string3 = compressor.compress("hellolololo", 6, 6)
     # print(compressed_string3)
     # print(compressor.decompress(compressed_string3))
-    with open("Test.txt", 'rb') as input_f:
+    file_name = "Test.txt"
+    with open(file_name, 'rb') as input_f:
         data = input_f.read()
     print(data)
     print(data[0])
-    compressed_file = compressor.compress(100, 100, input_file="Test.txt", output_file="compressed.txt")
+    word = "abcabaabc"
+    compressed_file = compressor.compress(search_buffer_len=250, look_ahead_buffer_len=250, input_file=file_name,
+                                          output_file="compressed.txt")
     print(compressed_file)
     decompressed_file = compressor.decompress_binary(input_file="compressed.txt", output_file="decompressed.txt")
     print(decompressed_file)
+    print(data == decompressed_file)
     # print(len(" hellololo, lololo"))
 
 
