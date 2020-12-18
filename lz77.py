@@ -1,3 +1,6 @@
+import time
+
+
 class LZ77Compressor:
     class Triple:
         def __init__(self, offset, length, char):
@@ -37,6 +40,7 @@ class LZ77Compressor:
         if not string and input_file:
             with open(input_file, 'rb') as input_f:
                 string = input_f.read()
+                string.rstrip()
         compressed_string = []
         cursor = 0
         START = 0
@@ -46,21 +50,15 @@ class LZ77Compressor:
         output_binary = bytearray()
         while True:
             found = False
-            print(search_buffer, look_ahead_buffer)
             match = string[search_buffer[START] if search_buffer[END] > search_buffer_len else 0:search_buffer[END]]
             parts = LZ77Compressor.get_substrings_with_offset_of(match)
-            print(parts)
             for i, chars_match in enumerate(parts):
                 char_built = string[look_ahead_buffer[START]:look_ahead_buffer[END]]
                 for _ in string[look_ahead_buffer[START]:look_ahead_buffer[END]]:
-                    # char_built += char1
-                    print(chars_match["string"], char_built)
                     if char_built == chars_match["string"]\
                             or LZ77Compressor.is_a_match(chars_match["string"], char_built)\
                             and chars_match["offset"] == len(chars_match["string"]):
                         found = True
-                        print("found")
-                        print(chars_match["offset"])
                         next_char_index = look_ahead_buffer[START] + len(char_built)\
                             if look_ahead_buffer[START] + len(char_built) < len(string) else None
 
@@ -84,13 +82,14 @@ class LZ77Compressor:
                     output_binary.append(string[cursor])
 
             triple = compressed_string[len(compressed_string) - 1]
-            print(triple.offset, triple.length, triple.char)
+            # print(triple.offset, triple.length, triple.char)
             offset = triple.length + 1
-            print()
             look_ahead_buffer = look_ahead_buffer[START] + offset, look_ahead_buffer[END] + offset \
-                if look_ahead_buffer[END] + offset < len(string) - 1 else len(string) - 1
+                if look_ahead_buffer[END] + offset < len(string) - 1 else len(string)
             search_buffer = search_buffer[START] + offset, search_buffer[END] + offset
             cursor = look_ahead_buffer[START]
+            progress = search_buffer[END]/((len(string) - 1)/100)
+            print("progress: {:.3f}".format(progress), flush=True)
             if search_buffer[END] > len(string) - 1:
                 break
         if output_file:
@@ -152,25 +151,29 @@ class LZ77Compressor:
             i += 3
             if i > len(compressed_binary):
                 break
-        if True:
+        if output_file:
             with open(output_file, 'wb') as output_f:
                 output_f.write(decompressed_string)
         return decompressed_string
 
 
 def main():
+    start = time.time()
     compressor = LZ77Compressor()
-    file_name = "Test.txt"
-    with open(file_name, 'rb') as input_f:
-        data = input_f.read()
-    print(data)
-    # word = "abcabaabc"
-    compressed_file = compressor.compress(search_buffer_len=250, look_ahead_buffer_len=250, input_file=file_name,
-                                          output_file="compressed.txt")
-    print(compressed_file)
-    decompressed_file = compressor.decompress_binary(input_file="compressed.txt", output_file="decompressed.txt")
-    print(decompressed_file)
-    print(data == decompressed_file)
+    # file_name = "fields.c"
+    # with open(file_name, 'rb') as input_f:
+    #     data = input_f.read()
+    #     data.rstrip()
+    # print(data)
+    # compressed_file = compressor.compress(search_buffer_len=255, look_ahead_buffer_len=150, input_file=file_name,
+    #                                       output_file="compressed.txt")
+    # print(compressed_file)
+    # decompressed_file = compressor.decompress_binary(input_file="compressed.txt", output_file="decompressed.txt")
+    # print(decompressed_file)
+    # print(data == decompressed_file)
+    print(compressor.decompress(compressor.compress(10, 10, "arman arman")))
+    end = time.time()
+    print("Time elapsed:", end - start)
 
 
 main()

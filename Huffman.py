@@ -1,4 +1,4 @@
-from math import log2, acos, sqrt, pi, tan
+from math import log2, acos, sqrt, pi
 import turtle
 
 
@@ -120,6 +120,17 @@ class HuffmanTree:
     def __init__(self):
         self.root = None
 
+    class HuffmanEncoder:
+        @staticmethod
+        def get_frequency(text):
+            count = {}
+            all_sum = 0
+            for character in text:
+                count[character] = count.get(character, 0) + 1
+                all_sum += 1
+            # all_sum = sum(count[ch] for ch in count)
+            return [(ch, count[ch] / all_sum) for ch in count]
+
     def huffman_coding(self, symbols):
         queue = PriorityQueue()
         for symbol, frequency in symbols:
@@ -156,11 +167,11 @@ class HuffmanTree:
 
     @staticmethod
     def entropy(symbols):
-        return -sum([probability * log2(probability) for symbol, probability in symbols])
+        return -sum(probability * log2(probability) for symbol, probability in symbols)
 
     @staticmethod
     def average_len(codes, symbols):
-        return sum([probability[1] * len(symbol[1]) for symbol, probability in zip(codes, symbols)])
+        return sum(probability[1] * len(symbol[1]) for symbol, probability in zip(codes, symbols))
 
     def _draw(self, cur_node, pen, origin, floors):
         if cur_node is not None:
@@ -207,33 +218,73 @@ class HuffmanTree:
             turtle.Screen().screensize(900, 900)
             self._draw(self.root, pen, pen.position(), sqrt(len(alphabet)))
 
-def main():
+    def encode(self, text):
+        freq = self.HuffmanEncoder.get_frequency(text)
 
-    huf = HuffmanTree()
+        # print(freq)
+        self.huffman_coding(freq)
+        codes = self.get_codes()
+        # print(max(len(code[1]) for code in codes))
+        # print(codes)
+        # print(HuffmanTree.average_len(codes, freq))
+        encoded_string = self._encode(text, codes)
+        return encoded_string
+
+    def _encode(self, text, codes):
+        encoded_string = ""
+        dic = {code[0]: code[1] for code in codes}
+        for ch in text:
+            if ch in dic:
+                encoded_string += dic[ch]
+        return encoded_string
+
+    def decode(self, encoded_string):
+        codes = self.get_codes()
+        decoded_string = ""
+        dic = {code[1]: code[0] for code in codes}
+        buffer = ""
+        for ch in encoded_string:
+            buffer += ch
+            if buffer in dic:
+                decoded_string += dic[buffer]
+                buffer = ""
+        return decoded_string
+
+
+def main():
+    with open("alice29.txt", 'r') as input_f:
+        data = input_f.read()
+        data.rstrip()
+    huf_tree = HuffmanTree()
+    text = data
+    encoded = huf_tree.encode(text)
+    print(len(text) * 4)
+    print(len(encoded))
+    decoded = huf_tree.decode(encoded)
+    print(decoded == data)
     # source = [("a_1", 0.25), ("a_2", 0.25), ("a_3", 0.125), ("a_4", 0.125),
     #                     ("a_5", 0.125), ("a_6", 0.0625), ("a_7", 0.0625)]
 
-    source = [("а", 0.064), ("б", 0.015), ("в", 0.039), ("г", 0.014),
-                ("д", 0.026), ("е ё ", 0.074), ("ж", 0.008),
-               ("з", 0.015), ("и", 0.064), ("й", 0.010), ("к", 0.029),
-                ("л", 0.036), ("м", 0.026), ("н", 0.056),
-               ("о", 0.096), ("п", 0.024), ("р", 0.041), ("с", 0.047),
-               ("т", 0.056), ("у ", 0.021), ("ф", 0.020), ("х", 0.009),
-               ("ц", 0.004), ("ч", 0.013), ("ш", 0.006),  ("щ ", 0.003),
-               ("ъ ь", 0.015), ("ы", 0.016),  ("э ", 0.003), ("ю", 0.007), ("я", 0.019), ("-", 0.124)
-               ]
+    # source = [("а", 0.064), ("б", 0.015), ("в", 0.039), ("г", 0.014),
+    #             ("д", 0.026), ("е ё ", 0.074), ("ж", 0.008),
+    #            ("з", 0.015), ("и", 0.064), ("й", 0.010), ("к", 0.029),
+    #             ("л", 0.036), ("м", 0.026), ("н", 0.056),
+    #            ("о", 0.096), ("п", 0.024), ("р", 0.041), ("с", 0.047),
+    #            ("т", 0.056), ("у ", 0.021), ("ф", 0.020), ("х", 0.009),
+    #            ("ц", 0.004), ("ч", 0.013), ("ш", 0.006),  ("щ ", 0.003),
+    #            ("ъ ь", 0.015), ("ы", 0.016),  ("э ", 0.003), ("ю", 0.007), ("я", 0.019), ("-", 0.124)]
 
     # source = [("a_1", 0.4), ("a_2", 0.15), ("a_3", 0.15), ("a_4", 0.15), ("a_5", 0.15)]
 
     # huf.huffman_coding([("a_1", 0.4), ("a_2", 0.15), ("a_3", 0.15), ("a_4", 0.15), ("a_5", 0.15)])
     # print(huf.entropy([("a_1", 0.4), ("a_2", 0.15), ("a_3", 0.15), ("a_4", 0.15), ("a_5", 0.15)]))
-    huf.huffman_coding(source)
-    print("entropy is " + str(HuffmanTree.entropy(source)) + " bits")
-    array_of_codes = huf.get_codes()
-    print(HuffmanTree.average_len(array_of_codes, source))
-    print("array of codes:", array_of_codes)
-    huf.draw(source)
-    turtle.done()
+    # huf.huffman_coding(source)
+    # print("entropy is " + str(HuffmanTree.entropy(source)) + " bits")
+    # array_of_codes = huf.get_codes()
+    # print(HuffmanTree.average_len(array_of_codes, source))
+    # print("array of codes:", array_of_codes)
+    # huf.draw(source)
+    # turtle.done()
 
 
 main()

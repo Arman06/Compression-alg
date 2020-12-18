@@ -24,7 +24,7 @@ class RLE:
 
 
 def main():
-    string = "Teeeeeest striiiiing fooooor thiiiis algorithm of compresssssssion"
+    string = "Teeeeeest striiiiing fooooor thiiiis compresssssssion algorithmmmm"
     print("Initial string:", string)
     encoded_string = RLE.encoding(string)
     print("Encoded string:", encoded_string)
